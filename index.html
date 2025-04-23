@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameZone - Your Ultimate Gaming Destination</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Three.js Libraries -->
+    <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.149.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #0f172a;
+        }
+        .game-card:hover {
+            transform: translateY(-5px);
+            transition: all 0.3s ease;
+        }
+        .premium-badge {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+        }
+        .spin-wheel {
+            transition: transform 5s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+        .daily-bonus-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .game-feature-icon {
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover .game-feature-icon {
+            transform: scale(1.2);
+        }
+        .mobile-menu-overlay {
+            backdrop-filter: blur(5px);
+            background-color: rgba(15, 23, 42, 0.9);
+        }
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        .gradient-cover {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.7) 50%, rgba(15, 23, 42, 0.95) 90%, #0f172a 100%);
+            z-index: -1;
+        }
+        
+        .clip-path-triangle {
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        
+        /* Game iframe styles */
+        .game-iframe-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        .game-iframe {
+            width: 90%;
+            height: 90%;
+            border: none;
+            border-radius: 8px;
+            background: #121212;
+        }
+        
+        .notification-popup {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1E293B;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            transform: translateX(120%);
+            transition: transform 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 320px;
+        }
+        
+        .notification-popup.show {
+            transform: translateX(0);
+        }
+        
+        /* Confetti animation */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: var(--confetti-color, #f00);
+            opacity: 0.7;
+            animation: fall linear forwards;
+        }
+        
+        @keyframes fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Tournament styles */
+        .tournament-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-left: 4px solid #EAB308;
+            transition: all 0.3s ease;
+        }
+        
+        .tournament-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border-left-width: 8px;
+        }
+        
+        .timer-container {
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(234, 179, 8, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="hero-canvas"></canvas>
+    <div class="gradient-cover"></div>
+
+    <nav class="bg-slate-800 bg-opacity-70 backdrop-blur-md text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold"><i class="bi bi-joystick text-yellow-400"></i> GameZone</h1>
+            <div class="hidden md:flex space-x-6">
+                <a href="#" class="hover:text-yellow-400 transition">Home</a>
+                <a href="#games" class="hover:text-yellow-400 transition">Games</a>
+                <a href="#tournaments" class="hover:text-yellow-400 transition">Tournaments</a>
+                <a href="#premium" class="hover:text-yellow-400 transition">Premium</a>
+                <a href="#leaderboard" class="hover:text-yellow-400 transition">Leaderboard</a>
+                <a href="#rewards" class="hover:text-yellow-400 transition">Rewards</a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">2</span>
+                    <button class="text-xl" id="notification-btn"><i class="bi bi-bell"></i></button>
+                </div>
+                <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium">Sign In</button>
+                <button class="md:hidden" id="mobile-menu-btn"><i class="bi bi-list text-2xl"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="mobile-menu-overlay hidden fixed inset-0 z-40">
+        <div class="bg-slate-800 p-6 h-screen flex flex-col">
+            <div class="flex justify-between mb-8">
+                <h1 class="text-2xl font-bold text-white"><i class="bi bi-joystick text-yellow-400"></i> GameZone</h1>
+                <button id="close-menu-btn"><i class="bi bi-x text-3xl text-white"></i></button>
+            </div>
+            <div class="flex flex-col space-y-6 text-white text-xl">
+                <a href="#" class="hover:text-yellow-400 transition">Home</a>
+                <a href="#games" class="hover:text-yellow-400 transition">Games</a>
+                <a href="#tournaments" class="hover:text-yellow-400 transition">Tournaments</a>
+                <a href="#premium" class="hover:text-yellow-400 transition">Premium</a>
+                <a href="#leaderboard" class="hover:text-yellow-400 transition">Leaderboard</a>
+                <a href="#rewards" class="hover:text-yellow-400 transition">Rewards</a>
+                <div class="pt-4">
+                    <div class="daily-bonus-pulse bg-gradient-to-r from-yellow-500 to-orange-500 p-4 rounded-lg text-center mb-6">
+                        <h3 class="text-black font-bold">Daily Bonus!</h3>
+                        <p class="text-sm text-black font-medium">Spin the wheel & win rewards</p>
+                    </div>
+                    <button class="bg-yellow-500 text-black px-4 py-3 rounded-lg hover:bg-yellow-400 transition font-medium w-full">Sign In</button>
+                </div>
+            </div>
+            <div class="mt-auto">
+                <div class="flex justify-center space-x-6 text-white text-2xl">
+                    <a href="#" class="hover:text-yellow-400"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="hover:text-yellow-400"><i class="bi bi-twitter"></i></a>
+                    <a href="#" class="hover:text-yellow-400"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="hover:text-yellow-400"><i class="bi bi-discord"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="container mx-auto px-4 py-8 relative">
+        <section class="text-white text-center mb-12 pt-12 md:pt-24 pb-20 relative">
+            <h2 class="text-4xl md:text-5xl font-bold mb-4">Play, Compete, Win Rewards!</h2>
+            <p class="text-gray-300 max-w-2xl mx-auto text-lg">Join millions of players worldwide in our premium gaming platform. Play classic and modern games, compete in tournaments, and win real rewards!</p>
+            <div class="mt-8 flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <button class="bg-yellow-500 hover:bg-yellow-400 text-black px-6 py-3 rounded-lg font-bold transition flex items-center justify-center">
+                    <i class="bi bi-controller mr-2 text-lg"></i> Play Now
+                </button>
+                <button class="bg-transparent border-2 border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black px-6 py-3 rounded-lg font-bold transition flex items-center justify-center">
+                    <i class="bi bi-trophy mr-2 text-lg"></i> Tournaments
+                </button>
+            </div>
+            <div class="daily-bonus-pulse mt-8 inline-block bg-gradient-to-r from-yellow-500 to-orange-500 py-2 px-6 rounded-full cursor-pointer" id="daily-bonus-button">
+                <span class="text-black font-bold flex items-center">
+                    <i class="bi bi-gift mr-2"></i> Claim your daily bonus!
+                </span>
+            </div>
+            
+            <div class="absolute bottom-0 left-0 w-full">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" class="w-full">
+                    <path fill="#1e293b" fill-opacity="1" d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,250.7C960,235,1056,181,1152,170.7C1248,160,1344,192,1392,208L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Featured Tournament Section -->
+        <section id="tournaments" class="mb-16">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white">Active Tournaments</h2>
+                <a href="#" class="text-yellow-400 hover:underline flex items-center">
+                    View All <i class="bi bi-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="bg-slate-800 rounded-xl p-6 mb-8">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <div class="md:w-1/3">
+                        <img src="https://source.unsplash.com/600x400/?chess+tournament" alt="Chess Tournament" class="rounded-lg w-full h-60 object-cover">
+                    </div>
+                    <div class="md:w-2/3">
+                        <div class="flex items-center mb-3">
+                            <span class="bg-red-500 text-white text-xs px-3 py-1 rounded-full mr-3">LIVE</span>
+                            <h3 class="text-2xl font-bold text-white">Grand Chess Masters Tournament</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">Compete against the best chess players from around the world in this prestigious tournament. Prove your strategic skills and claim the title of Chess Grand Master!</p>
+                        
+                        <div class="flex flex-wrap gap-4 mb-4">
+                            <div class="timer-container flex items-center gap-2 px-4 py-2 rounded-lg">
+                                <i class="bi bi-calendar-event text-yellow-400"></i>
+                                <span class="text-white">Ends in:</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="bg-slate-700 text-white px-2 py-1 rounded">2</span>
+                                    <span class="text-white">:</span>
+                                    <span class="bg-slate-700 text-white px-2 py-1 rounded">14</span>
+                                    <span class="text-white">:</span>
+                                    <span class="bg-slate-700 text-white px-2 py-1 rounded">36</span>
+                                    <span class="text-white">:</span>
+                                    <span class="bg-slate-700 text-white px-2 py-1 rounded">22</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 bg-slate-700 px-4 py-2 rounded-lg">
+                                <i class="bi bi-people-fill text-yellow-400"></i>
+                                <span class="text-white">246 players</span>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 bg-slate-700 px-4 py-2 rounded-lg">
+                                <i class="bi bi-trophy-fill text-yellow-400"></i>
+                                <span class="text-white">₹25,000 prize pool</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-4">
+                            <button class="bg-yellow-500 text-black px-6 py-2 rounded-lg font-bold hover:bg-yellow-400 transition">
+                                Join Tournament
+                            </button>
+                            <button class="border border-yellow-500 text-yellow-500 px-6 py-2 rounded-lg font-bold hover:bg-yellow-500 hover:text-black transition">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="tournament-card p-4 rounded-lg">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Rummy Masters League</h3>
+                            <p class="text-gray-400 text-sm">Card strategy tournament</p>
+                        </div>
+                        <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">UPCOMING</span>
+                    </div>
+                    <div class="flex gap-4 mb-4">
+                        <div class="flex items-center gap-1 text-sm">
+                            <i class="bi bi-calendar3 text-yellow-400"></i>
+                            <span class="text-white">Starts: Mar 15</span>
+                        </div>
+                        <div class="flex items-center gap-1 text-sm">
+                            <i class="bi bi-people-fill text-yellow-400"></i>
+                            <span class="text-white">124 registered</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-yellow-400 font-bold">₹10,000 prize</span>
+                        <button class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 text-sm rounded-lg transition">
+                            Register
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="tournament-card p-4 rounded-lg">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Ludo Championship</h3>
+                            <p class="text-gray-400 text-sm">Strategy & luck combine</p>
+                        </div>
+                        <span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">ENROLLING</span>
+                    </div>
+                    <div class="flex gap-4 mb-4">
+                        <div class="flex items-center gap-1 text-sm">
+                            <i class="bi bi-calendar3 text-yellow-400"></i>
+                            <span class="text-white">Starts: Mar 12</span>
+                        </div>
+                        <div class="flex items-center gap-1 text-sm">
+                            <i class="bi bi-people-fill text-yellow-400"></i>
+                            <span class="text-white">86 registered</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-yellow-400 font-bold">₹5,000 prize</span>
+                        <button class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 text-sm rounded-lg transition">
+                            Register
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="games" class="mb-16">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white">Popular Games</h2>
+                <a href="#" class="text-yellow-400 hover:underline flex items-center">
+                    View All <i class="bi bi-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Game Cards -->
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?chess" alt="Chess" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.8
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Chess</h3>
+                        <p class="text-gray-400 text-sm mb-4">Challenge players worldwide in the ultimate game of strategy</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 10k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="chess">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?cards" alt="Rummy" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.9
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-white font-bold text-xl">Rummy</h3>
+                            <span class="premium-badge px-2 py-1 rounded-full text-xs">Premium</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-4">Master the art of card sequencing and win big</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 25k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="rummy">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?dice" alt="Ludo" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.7
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Ludo</h3>
+                        <p class="text-gray-400 text-sm mb-4">Classic board game with modern twists and rewards</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 50k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="ludo">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?casino" alt="Casino Royale" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.6
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-white font-bold text-xl">Casino Royale</h3>
+                            <span class="premium-badge px-2 py-1 rounded-full text-xs">Premium</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-4">Experience the thrill of premium casino games</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 100k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="casino">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="more-games" class="mb-16">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-white">More Games to Explore</h2>
+                <a href="#" class="text-yellow-400 hover:underline flex items-center">
+                    View All <i class="bi bi-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- More Game Cards -->
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?board+game" alt="Carrom" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.5
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Carrom</h3>
+                        <p class="text-gray-400 text-sm mb-4">Strike, pocket, and become a carrom champion</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 30k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="carrom">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?arcade" alt="Whack-a-Mole" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.4
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Whack-a-Mole</h3>
+                        <p class="text-gray-400 text-sm mb-4">Test your reflexes in this classic arcade game</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 15k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="whackamole">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?memory+game" alt="Memory Match" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.3
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Memory Match</h3>
+                        <p class="text-gray-400 text-sm mb-4">Challenge your memory skills and match pairs</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 20k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="memorymatch">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?wheel+fortune" alt="Spin to Win" class="w-full h-48 object-cover">
+                        <div class="absolute top-0 left-0 bg-red-500 text-white px-2 py-1 rounded-br text-xs">
+                            HOT
+                        </div>
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.9
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-white font-bold text-xl">Spin to Win</h3>
+                            <span class="premium-badge px-2 py-1 rounded-full text-xs">Premium</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-4">Spin the wheel and win cash & recharge offers</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 200k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="spintowin">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- New games section -->
+            <h3 class="text-2xl font-bold text-white mt-12 mb-6">New Additions</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?sudoku" alt="Sudoku" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.7
+                        </div>
+                        <div class="absolute top-0 left-0 bg-green-500 text-white px-2 py-1 rounded-br text-xs">
+                            NEW
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Sudoku</h3>
+                        <p class="text-gray-400 text-sm mb-4">Exercise your brain with this classic number puzzle</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 5k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="sudoku">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?snake+game" alt="Snake & Ladder" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.6
+                        </div>
+                        <div class="absolute top-0 left-0 bg-green-500 text-white px-2 py-1 rounded-br text-xs">
+                            NEW
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">Snake & Ladder</h3>
+                        <p class="text-gray-400 text-sm mb-4">Classic board game with modern twist and boosters</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 7k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="snakeladder">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?puzzle+2048" alt="2048 Puzzle" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.8
+                        </div>
+                        <div class="absolute top-0 left-0 bg-green-500 text-white px-2 py-1 rounded-br text-xs">
+                            NEW
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold text-xl mb-2">2048 Puzzle</h3>
+                        <p class="text-gray-400 text-sm mb-4">Merge tiles to reach 2048 in this addictive puzzle</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 12k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="2048">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-card bg-slate-700 rounded-xl overflow-hidden shadow-lg">
+                    <div class="relative">
+                        <img src="https://source.unsplash.com/400x300/?arcade+brick" alt="Brick Breaker" class="w-full h-48 object-cover">
+                        <div class="absolute top-2 right-2 bg-slate-800 text-yellow-400 px-2 py-1 rounded text-xs">
+                            <i class="bi bi-star-fill mr-1"></i> 4.5
+                        </div>
+                        <div class="absolute top-0 left-0 bg-green-500 text-white px-2 py-1 rounded-br text-xs">
+                            NEW
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-white font-bold text-xl">Brick Breaker</h3>
+                            <span class="premium-badge px-2 py-1 rounded-full text-xs">Premium</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-4">Fast-paced brick breaker with power-ups</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-400"><i class="bi bi-people-fill"></i> 8k+ Players</span>
+                            <button class="bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium play-game-btn" data-game="brickbreaker">Play Now</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="rewards" class="mb-16 bg-slate-800 p-6 rounded-xl">
+            <div class="flex flex-col md:flex-row">
+                <div class="md:w-1/2 p-4">
+                    <h2 class="text-3xl font-bold text-white mb-4">Spin & Win Daily Rewards!</h2>
+                    <p class="text-gray-400 mb-6">Spin the wheel once every day and win exciting prizes including cash rewards, game coins, and mobile recharges!</p>
+                    <div class="bg-slate-700 p-4 rounded-lg mb-6">
+                        <h3 class="text-yellow-400 font-bold mb-2">Today's Prizes</h3>
+                        <ul class="text-white space-y-2">
+                            <li><i class="bi bi-check-circle-fill text-green-400 mr-2"></i>₹500 Cash</li>
+                            <li><i class="bi bi-check-circle-fill text-green-400 mr-2"></i>1000 Game Coins</li>
+                            <li><i class="bi bi-check-circle-fill text-green-400 mr-2"></i>Mobile Recharge worth ₹100</li>
+                            <li><i class="bi bi-check-circle-fill text-green-400 mr-2"></i>Premium Game Pass (1 Day)</li>
+                            <li><i class="bi bi-check-circle-fill text-green-400 mr-2"></i>Tournament Entry Ticket</li>
+                        </ul>
+                    </div>
+                    <button class="bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-8 py-3 rounded-lg hover:opacity-90 transition font-bold w-full" id="spin-button">
+                        <i class="bi bi-arrow-repeat mr-2"></i> SPIN NOW
+                    </button>
+                </div>
+                <div class="md:w-1/2 p-4 flex items-center justify-center">
+                    <div class="relative">
+                        <div class="w-64 h-64 bg-slate-700 rounded-full border-8 border-yellow-500 relative overflow-hidden" id="spin-wheel">
+                            <div class="absolute inset-0">
+                                <!-- Wheel Segments -->
+                                <div class="absolute top-0 left-0 w-full h-full">
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-red-500 origin-bottom-left rotate-0"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-blue-500 origin-bottom-left rotate-45"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-green-500 origin-bottom-left rotate-90"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-yellow-500 origin-bottom-left rotate-135"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-purple-500 origin-bottom-left rotate-180"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-pink-500 origin-bottom-left rotate-225"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-orange-500 origin-bottom-left rotate-270"></div>
+                                    <div class="absolute top-0 left-1/2 w-1/2 h-1/2 bg-teal-500 origin-bottom-left rotate-315"></div>
+                                </div>
+                                <!-- Prize labels -->
+                                <div class="absolute top-0 left-0 w-full h-full pointer-events-none text-xs font-bold">
+                                    <div class="absolute top-8 left-1/2 transform -translate-x-1/2 rotate-0 text-black">₹500</div>
+                                    <div class="absolute top-1/4 right-8 transform rotate-45 text-white">₹100</div>
+                                    <div class="absolute top-1/2 right-8 transform -translate-y-1/2 rotate-90 text-white">1000 <br>Coins</div>
+                                    <div class="absolute bottom-1/4 right-8 transform rotate-135 text-black">₹50</div>
+                                    <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 rotate-180 text-white">Premium <br>Pass</div>
+                                    <div class="absolute bottom-1/4 left-8 transform rotate-225 text-white">₹200</div>
+                                    <div class="absolute top-1/2 left-8 transform -translate-y-1/2 rotate-270 text-black">Try <br>Again</div>
+                                    <div class="absolute top-1/4 left-8 transform rotate-315 text-white">500 <br>Coins</div>
+                                </div>
+                                <!-- Center of wheel -->
+                                <div class="absolute top-1/2 left-1/2 w-16 h-16 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center text-sm font-bold text-center shadow">SPIN<br>NOW</div>
+                            </div>
+                        </div>
+                        <!-- Pointer -->
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 -mt-2 w-6 h-8 bg-white clip-path-triangle z-20"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="leaderboard" class="mb-16">
+            <h2 class="text-3xl font-bold text-white mb-6">Top Players Leaderboard</h2>
+            
+            <div class="bg-slate-800 rounded-xl p-4 shadow-lg">
+                <div class="flex flex-wrap items-center justify-between mb-4">
+                    <h3 class="text-white font-bold">Global Rankings</h3>
+                    <div class="flex flex-wrap space-x-2 mt-2 sm:mt-0">
+                        <button class="bg-yellow-500 text-black px-3 py-1 rounded-lg text-sm font-medium">Today</button>
+                        <button class="bg-slate-700 text-white px-3 py-1 rounded-lg text-sm">Weekly</button>
+                        <button class="bg-slate-700 text-white px-3 py-1 rounded-lg text-sm">All Time</button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-white">
+                        <thead class="bg-slate-700 text-left">
+                            <tr>
+                                <th class="p-3 rounded-tl-lg">Rank</th>
+                                <th class="p-3">Player</th>
+                                <th class="p-3">Games</th>
+                                <th class="p-3">Wins</th>
+                                <th class="p-3 rounded-tr-lg">Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-slate-700">
+                                <td class="p-3">
+                                    <span class="bg-yellow-500 text-black font-bold w-8 h-8 rounded-full inline-flex items-center justify-center">1</span>
+                                </td>
+                                <td class="p-3">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-blue-500 mr-3 flex items-center justify-center">
+                                            <i class="bi bi-person-fill text-white"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">GamerKing99</div>
+                                            <div class="text-xs text-gray-400">Premium User</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">254</td>
+                                <td class="p-3">189</td>
+                                <td class="p-3 font-bold text-yellow-400">12,540</td>
+                            </tr>
+                            <tr class="border-b border-slate-700">
+                                <td class="p-3">
+                                    <span class="bg-gray-500 text-white font-bold w-8 h-8 rounded-full inline-flex items-center justify-center">2</span>
+                                </td>
+                                <td class="p-3">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-500 mr-3 flex items-center justify-center">
+                                            <i class="bi bi-person-fill text-white"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">ChessMaster</div>
+                                            <div class="text-xs text-gray-400">Premium User</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">198</td>
+                                <td class="p-3">142</td>
+                                <td class="p-3 font-bold text-yellow-400">10,980</td>
+                            </tr>
+                            <tr class="border-b border-slate-700">
+                                <td class="p-3">
+                                    <span class="bg-yellow-800 text-white font-bold w-8 h-8 rounded-full inline-flex items-center justify-center">3</span>
+                                </td>
+                                <td class="p-3">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-green-500 mr-3 flex items-center justify-center">
+                                            <i class="bi bi-person-fill text-white"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">LuckyWinner</div>
+                                            <div class="text-xs text-gray-400">Regular User</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">167</td>
+                                <td class="p-3">119</td>
+                                <td class="p-3 font-bold text-yellow-400">9,740</td>
+                            </tr>
+                            <tr class="border-b border-slate-700">
+                                <td class="p-3">4</td>
+                                <td class="p-3">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-purple-500 mr-3 flex items-center justify-center">
+                                            <i class="bi bi-person-fill text-white"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">CasinoRoyale</div>
+                                            <div class="text-xs text-gray-400">Premium User</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">145</td>
+                                <td class="p-3">98</td>
+                                <td class="p-3 font-bold text-yellow-400">8,620</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3">5</td>
+                                <td class="p-3">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-teal-500 mr-3 flex items-center justify-center">
+                                            <i class="bi bi-person-fill text-white"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium">SpinMaster</div>
+                                            <div class="text-xs text-gray-400">Regular User</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3">122</td>
+                                <td class="p-3">79</td>
+                                <td class="p-3 font-bold text-yellow-400">7,450</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex justify-center">
+                    <button class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition">View Full Leaderboard</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="premium" class="mb-16">
+            <h2 class="text-3xl font-bold text-white mb-6">Premium Membership</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-slate-800 rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-gray-700 p-4 text-center">
+                        <h3 class="text-xl font-bold text-white">Basic</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <span class="text-3xl font-bold text-white">Free</span>
+                        </div>
+                        <ul class="text-white space-y-3 mb-8">
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Access to free games</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Daily spin rewards</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Basic leaderboard features</li>
+                            <li class="flex items-center"><i class="bi bi-x-circle-fill text-red-400 mr-2"></i> No ad-free experience</li>
+                            <li class="flex items-center"><i class="bi bi-x-circle-fill text-red-400 mr-2"></i> No premium games</li>
+                        </ul>
+                        <button class="bg-slate-700 text-white hover:bg-slate-600 transition font-medium w-full py-3 rounded-lg">Current Plan</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 rounded-xl overflow-hidden shadow-lg relative transform hover:scale-105 transition-all duration-300">
+                    <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-4 py-1 rounded-full text-sm font-bold">POPULAR</div>
+                    <div class="bg-yellow-500 p-4 text-center">
+                        <h3 class="text-xl font-bold text-black">Gold</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <span class="text-3xl font-bold text-white">₹199</span>
+                            <span class="text-gray-400">/month</span>
+                        </div>
+                        <ul class="text-white space-y-3 mb-8">
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Access to all games</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Ad-free experience</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Double daily spin rewards</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Premium tournaments</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Exclusive profile badges</li>
+                        </ul>
+                        <button class="bg-yellow-500 text-black hover:bg-yellow-400 transition font-bold w-full py-3 rounded-lg">Subscribe Now</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-gradient-to-r from-purple-500 to-blue-500 p-4 text-center">
+                        <h3 class="text-xl font-bold text-white">Diamond</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="text-center mb-6">
+                            <span class="text-3xl font-bold text-white">₹499</span>
+                            <span class="text-gray-400">/month</span>
+                        </div>
+                        <ul class="text-white space-y-3 mb-8">
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Everything in Gold plan</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> VIP customer support</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Triple daily spin rewards</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Monthly cash bonuses</li>
+                            <li class="flex items-center"><i class="bi bi-check-circle-fill text-green-400 mr-2"></i> Priority tournament access</li>
+                        </ul>
+                        <button class="bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:opacity-90 transition font-bold w-full py-3 rounded-lg">Subscribe Now</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-16 text-white text-center">
+            <h2 class="text-3xl font-bold mb-8">Why Choose GameZone?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-slate-700 p-6 rounded-xl feature-card">
+                    <i class="bi bi-trophy text-4xl text-yellow-400 mb-4 game-feature-icon"></i>
+                    <h3 class="text-xl font-bold mb-2">Daily Tournaments</h3>
+                    <p class="text-gray-400">Compete in daily tournaments and win exciting prizes</p>
+                </div>
+                <div class="bg-slate-700 p-6 rounded-xl feature-card">
+                    <i class="bi bi-shield-check text-4xl text-yellow-400 mb-4 game-feature-icon"></i>
+                    <h3 class="text-xl font-bold mb-2">Secure Gaming</h3>
+                    <p class="text-gray-400">Advanced security measures to protect your gameplay and transactions</p>
+                </div>
+                <div class="bg-slate-700 p-6 rounded-xl feature-card">
+                    <i class="bi bi-cash-stack text-4xl text-yellow-400 mb-4 game-feature-icon"></i>
+                    <h3 class="text-xl font-bold mb-2">Real Rewards</h3>
+                    <p class="text-gray-400">Convert your gaming skills into real rewards and cash prizes</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+                <div class="bg-slate-700 p-6 rounded-xl feature-card">
+                    <i class="bi bi-phone text-4xl text-yellow-400 mb-4 game-feature-icon"></i>
+                    <h3 class="text-xl font-bold mb-2">Mobile Friendly</h3>
+                    <p class="text-gray-400">Play your favorite games on any device, anywhere, anytime</p>
+                </div>
+                <div class="bg-slate-700 p-6 rounded-xl feature-card">
+                    <i class="bi bi-graph-up-arrow text-4xl text-yellow-400 mb-4 game-feature-icon"></i>
+                    <h3 class="text-xl font-bold mb-2">Skill Level Progression</h3>
+                    <p class="text-gray-400">Progress from basic to advanced game levels and track your improvement</p>
+                </div>
+                <div class="bg-slate-700 p-6 rounded-xl feature-card">
+                    <i class="bi bi-gift text-4xl text-yellow-400 mb-4 game-feature-icon"></i>
+                    <h3 class="text-xl font-bold mb-2">Referral Bonuses</h3>
+                    <p class="text-gray-400">Invite friends and receive exclusive bonuses and rewards</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="my-16 bg-gradient-to-r from-yellow-500 to-orange-500 p-8 rounded-xl text-center">
+            <h2 class="text-3xl font-bold text-black mb-4">Ready to Start Playing?</h2>
+            <p class="text-black mb-8 max-w-2xl mx-auto">Join millions of players worldwide. Sign up now and get 500 bonus coins and a free spin!</p>
+            <button class="bg-black text-white px-8 py-4 rounded-lg hover:bg-gray-800 transition font-bold text-lg">
+                Get Started Now
+            </button>
+        </section>
+    </main>
+
+    <footer class="bg-slate-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h4 class="font-bold text-lg mb-4">GameZone</h4>
+                    <p class="text-gray-400">Your ultimate destination for online gaming and rewards.</p>
+                    <div class="mt-4">
+                        <a href="#" class="inline-block bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium mr-2 mb-2">
+                            <i class="bi bi-google-play mr-1"></i> Google Play
+                        </a>
+                        <a href="#" class="inline-block bg-yellow-500 text-black px-4 py-2 rounded-lg hover:bg-yellow-400 transition font-medium mb-2">
+                            <i class="bi bi-apple mr-1"></i> App Store
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> About Us</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Games</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Tournaments</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Support</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Refer & Earn</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Legal</h4>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Fair Play Policy</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Refund Policy</a></li>
+                        <li><a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-chevron-right text-xs mr-1"></i> Responsible Gaming</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-4">Connect With Us</h4>
+                    <div class="flex space-x-4 text-2xl mb-4">
+                        <a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-twitter"></i></a>
+                        <a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-discord"></i></a>
+                        <a href="#" class="hover:text-yellow-400 transition"><i class="bi bi-youtube"></i></a>
+                    </div>
+                    <h4 class="font-bold text-md mb-2">Subscribe to Newsletter</h4>
+                    <div class="flex">
+                        <input type="email" placeholder="Your email" class="bg-slate-700 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-yellow-500 w-full">
+                        <button class="bg-yellow-500 text-black px-3 rounded-r-lg hover:bg-yellow-400 transition">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p class="mb-2">Payment Methods: <i class="bi bi-credit-card mx-1"></i> <i class="bi bi-paypal mx-1"></i> <i class="bi bi-wallet2 mx-1"></i> <i class="bi bi-cash-coin mx-1"></i></p>
+                <p>&copy; 2023 GameZone. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center" id="login-modal">
+        <div class="bg-slate-800 p-6 rounded-xl w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Welcome to GameZone</h3>
+                <button class="text-gray-400 hover:text-white" id="close-login-modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <div class="flex border-b border-gray-700">
+                    <button class="px-4 py-2 text-white font-medium border-b-2 border-yellow-500" id="login-tab">Login</button>
+                    <button class="px-4 py-2 text-gray-400 font-medium" id="register-tab">Register</button>
+                </div>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-gray-400 mb-1">Email Address</label>
+                    <input type="email" id="email" class="bg-slate-700 w-full px-4 py-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                </div>
+                <div>
+                    <label for="password" class="block text-gray-400 mb-1">Password</label>
+                    <input type="password" id="password" class="bg-slate-700 w-full px-4 py-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="remember" class="rounded bg-slate-700 border-gray-600 text-yellow-500 focus:ring-yellow-500">
+                        <label for="remember" class="ml-2 text-sm text-gray-400">Remember me</label>
+                    </div>
+                    <a href="#" class="text-sm text-yellow-400 hover:underline">Forgot Password?</a>
+                </div>
+                <button type="submit" class="w-full bg-yellow-500 text-black font-bold py-2 rounded-lg hover:bg-yellow-400 transition">Sign In</button>
+            </form>
+            <div class="mt-6 text-center">
+                <p class="text-gray-400">Or sign in with</p>
+                <div class="flex justify-center space-x-4 mt-4">
+                    <button class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full">
+                        <i class="bi bi-facebook"></i>
+                    </button>
+                    <button class="bg-sky-500 hover:bg-sky-600 text-white p-2 rounded-full">
+                        <i class="bi bi-twitter"></i>
+                    </button>
+                    <button class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full">
+                        <i class="bi bi-google"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game iframe container -->
+    <div class="game-iframe-container flex flex-col items-center justify-center" id="game-container">
+        <div class="relative w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
+            <div class="bg-slate-800 p-3 flex items-center justify-between rounded-t-lg">
+                <h3 class="text-white font-bold text-lg" id="game-title">Game Title</h3>
+                <button class="text-gray-400 hover:text-white" id="close-game-btn">
+                    <i class="bi bi-x-lg text-2xl"></i>
+                </button>
+            </div>
+            <div class="flex-grow bg-black relative flex items-center justify-center">
+                <iframe id="game-iframe" class="game-iframe" src="" allowfullscreen></iframe>
+                <div class="absolute inset-0 flex items-center justify-center" id="game-loader">
+                    <div class="text-center">
+                        <div class="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p class="text-white">Loading game...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification popup -->
+    <div class="notification-popup" id="notification-popup">
+        <div class="bg-yellow-500 w-12 h-12 rounded-full flex items-center justify-center text-black text-xl">
+            <i class="bi bi-bell"></i>
+        </div>
+        <div class="flex-grow">
+            <h4 class="font-bold text-white" id="notification-title">Notification Title</h4>
+            <p class="text-gray-300 text-sm" id="notification-message">Notification message goes here</p>
+        </div>
+        <button class="text-gray-400 hover:text-white" id="close-notification">
+            <i class="bi bi-x"></i>
+        </button>
+    </div>
+
+    <!-- Confetti container for celebrations -->
+    <div class="confetti-container" id="confetti-container"></div>
+
+    <script>
+        // Three.js Background
+        let scene, camera, renderer, particles;
+        
+        function initThreeJS() {
+            // Scene setup
+            scene = new THREE.Scene();
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('hero-canvas'),
+                alpha: true,
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0f172a, 1);
+            
+            // Add particles
+            createParticles();
+            
+            // Animation loop
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        function createParticles() {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            
+            // Create particles
+            for (let i = 0; i < 1500; i++) {
+                const x = (Math.random() - 0.5) * 100;
+                const y = (Math.random() - 0.5) * 100;
+                const z = (Math.random() - 0.5) * 100;
+                vertices.push(x, y, z);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            
+            // Create materials with different colors
+            const materials = [
+                new THREE.PointsMaterial({ size: 0.5, color: 0xffbb00 }),
+                new THREE.PointsMaterial({ size: 0.5, color: 0xffffff })
+            ];
+            
+            const particleGroups = [];
+            
+            // Create particle systems for each material
+            for (const material of materials) {
+                const particleSystem = new THREE.Points(geometry, material);
+                particleSystem.rotation.x = Math.random() * 6;
+                particleSystem.rotation.y = Math.random() * 6;
+                particleSystem.rotation.z = Math.random() * 6;
+                scene.add(particleSystem);
+                particleGroups.push(particleSystem);
+            }
+            
+            particles = particleGroups;
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate particle systems
+            particles.forEach(particle => {
+                particle.rotation.y += 0.0005;
+                particle.rotation.z += 0.0003;
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Initialize Three.js background
+        if (window.innerWidth > 768) {  // Only on desktop for performance
+            document.addEventListener('DOMContentLoaded', initThreeJS);
+        }
+        
+        // Mobile menu toggle
+        const menuButton = document.getElementById('mobile-menu-btn');
+        const closeMenuButton = document.getElementById('close-menu-btn');
+        const mobileMenuOverlay = document.querySelector('.mobile-menu-overlay');
+        
+        menuButton.addEventListener('click', () => {
+            mobileMenuOverlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        });
+        
+        closeMenuButton.addEventListener('click', () => {
+            mobileMenuOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+
+        // Game cards hover effect
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('mouseover', () => {
+                card.classList.add('transform', 'scale-105');
+                card.style.transition = 'all 0.3s ease';
+            });
+            
+            card.addEventListener('mouseout', () => {
+                card.classList.remove('transform', 'scale-105');
+            });
+        });
+
+        // Spin the wheel functionality
+        const spinButton = document.getElementById('spin-button');
+        const dailyBonusButton = document.getElementById('daily-bonus-button');
+        const spinWheel = document.getElementById('spin-wheel');
+        let canSpin = true;
+
+        function spinTheWheel() {
+            if (!canSpin) return;
+            
+            canSpin = false;
+            const degrees = Math.floor(Math.random() * 360) + 1440; // Spin at least 4 full rotations
+            spinWheel.style.transform = `rotate(${degrees}deg)`;
+            
+            setTimeout(() => {
+                // Show reward notification
+                showConfetti();
+                showToast('Congratulations! You won 500 coins! 🎉', 'success');
+                
+                // Reset for next spin (after 24 hours in real app)
+                setTimeout(() => {
+                    spinWheel.style.transition = 'none';
+                    spinWheel.style.transform = 'rotate(0deg)';
+                    setTimeout(() => {
+                        spinWheel.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)';
+                        canSpin = true;
+                    }, 50);
+                }, 6000);
+            }, 5000);
+        }
+
+        spinButton.addEventListener('click', spinTheWheel);
+        dailyBonusButton.addEventListener('click', () => {
+            document.getElementById('rewards').scrollIntoView({ behavior: 'smooth' });
+            
+            setTimeout(() => {
+                spinButton.classList.add('animate-pulse');
+                setTimeout(() => {
+                    spinButton.classList.remove('animate-pulse');
+                }, 1500);
+            }, 1000);
+        });
+
+        // Login Modal Functionality
+        const loginButtons = document.querySelectorAll('.bg-yellow-500.text-black.px-4.py-2.rounded-lg, .bg-yellow-500.text-black.px-4.py-3.rounded-lg');
+        const loginModal = document.getElementById('login-modal');
+        const closeLoginModal = document.getElementById('close-login-modal');
+        const loginTab = document.getElementById('login-tab');
+        const registerTab = document.getElementById('register-tab');
+
+        loginButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                loginModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        closeLoginModal.addEventListener('click', () => {
+            loginModal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('border-b-2', 'border-yellow-500', 'text-white');
+            loginTab.classList.remove('text-gray-400');
+            registerTab.classList.remove('border-b-2', 'border-yellow-500', 'text-white');
+            registerTab.classList.add('text-gray-400');
+        });
+
+        registerTab.addEventListener('click', () => {
+            registerTab.classList.add('border-b-2', 'border-yellow-500', 'text-white');
+            registerTab.classList.remove('text-gray-400');
+            loginTab.classList.remove('border-b-2', 'border-yellow-500', 'text-white');
+            loginTab.classList.add('text-gray-400');
+        });
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            let bgColor = 'bg-blue-500';
+            
+            if (type === 'success') bgColor = 'bg-green-500';
+            else if (type === 'error') bgColor = 'bg-red-500';
+            else if (type === 'warning') bgColor = 'bg-yellow-500';
+            
+            toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-6 py-3 rounded-lg z-50 shadow-lg`;
+            toast.innerHTML = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 500);
+            }, 3000);
+        }
+
+        // Notification popup
+        const notificationPopup = document.getElementById('notification-popup');
+        const closeNotification = document.getElementById('close-notification');
+        const notificationTitle = document.getElementById('notification-title');
+        const notificationMessage = document.getElementById('notification-message');
+
+        // Notification functionality
+        const notificationBtn = document.getElementById('notification-btn');
+        notificationBtn.addEventListener('click', () => {
+            showAvailableNotifications();
+            const badge = notificationBtn.previousElementSibling;
+            badge.style.display = 'none';
+        });
+
+        // Available notifications
+        const notifications = [
+            {
+                title: 'New Tournament Alert!',
+                message: 'Chess Masters Tournament starts in 2 hours. Join now!'
+            },
+            {
+                title: 'Daily Bonus Ready',
+                message: 'Your daily spin reward is ready to be claimed!'
+            },
+            {
+                title: 'Friend Request',
+                message: 'ChessMaster wants to add you as a friend!'
+            },
+            {
+                title: 'Premium Discount',
+                message: '40% OFF on Premium membership for the next 24 hours!'
+            }
+        ];
+
+        // Show random notification
+        function showAvailableNotifications() {
+            const randomIndex = Math.floor(Math.random() * notifications.length);
+            const notification = notifications[randomIndex];
+            
+            notificationTitle.textContent = notification.title;
+            notificationMessage.textContent = notification.message;
+            notificationPopup.classList.add('show');
+            
+            setTimeout(() => {
+                notificationPopup.classList.remove('show');
+            }, 5000);
+        }
+
+        closeNotification.addEventListener('click', () => {
+            notificationPopup.classList.remove('show');
+        });
+
+        // Game iframe functionality
+        const gameContainer = document.getElementById('game-container');
+        const closeGameBtn = document.getElementById('close-game-btn');
+        const gameTitle = document.getElementById('game-title');
+        const gameIframe = document.getElementById('game-iframe');
+        const gameLoader = document.getElementById('game-loader');
+        const playGameButtons = document.querySelectorAll('.play-game-btn');
+
+        // Game data - In a real app, this would come from a database
+        const games = {
+            chess: {
+                title: 'Chess',
+                url: 'https://www.chess.com/play/computer',
+                isPremium: false
+            },
+            rummy: {
+                title: 'Rummy',
+                url: 'https://cardgames.io/rummy/',
+                isPremium: true
+            },
+            ludo: {
+                title: 'Ludo',
+                url: 'https://www.crazygames.com/game/ludo-king',
+                isPremium: false
+            },
+            casino: {
+                title: 'Casino Royale',
+                url: 'https://www.casinoroyalecard.com/',
+                isPremium: true
+            },
+            carrom: {
+                title: 'Carrom',
+                url: 'https://www.crazygames.com/game/carrom-pool',
+                isPremium: false
+            },
+            whackamole: {
+                title: 'Whack-a-Mole',
+                url: 'https://www.crazygames.com/game/whack-a-mole',
+                isPremium: false
+            },
+            memorymatch: {
+                title: 'Memory Match',
+                url: 'https://www.crazygames.com/game/memory-match',
+                isPremium: false
+            },
+            spintowin: {
+                title: 'Spin to Win',
+                url: 'about:blank',  // In a real app, this would be a custom game URL
+                isPremium: true
+            },
+            sudoku: {
+                title: 'Sudoku',
+                url: 'https://sudoku.com/',
+                isPremium: false
+            },
+            snakeladder: {
+                title: 'Snake & Ladder',
+                url: 'https://www.crazygames.com/game/snakes-and-ladders',
+                isPremium: false
+            },
+            '2048': {
+                title: '2048',
+                url: 'https://play2048.co/',
+                isPremium: false
+            },
+            brickbreaker: {
+                title: 'Brick Breaker',
+                url: 'https://www.crazygames.com/game/atari-breakout',
+                isPremium: true
+            }
+        };
+
+        playGameButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const gameId = button.getAttribute('data-game');
+                const game = games[gameId];
+                
+                if (!game) {
+                    showToast('Game not available yet!', 'error');
+                    return;
+                }
+                
+                if (game.isPremium) {
+                    // Check if user is premium - in a real app, this would check user status
+                    const isPremiumUser = false;  // Simulate non-premium user
+                    
+                    if (!isPremiumUser) {
+                        showToast('This is a premium game. Please subscribe to play!', 'warning');
+                        setTimeout(() => {
+                            document.getElementById('premium').scrollIntoView({ behavior: 'smooth' });
+                        }, 1500);
+                        return;
+                    }
+                }
+                
+                gameTitle.textContent = game.title;
+                gameIframe.src = game.url;
+                gameLoader.style.display = 'flex';
+                gameContainer.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                
+                // Simulate loading
+                setTimeout(() => {
+                    gameLoader.style.display = 'none';
+                }, 2000);
+            });
+        });
+
+        closeGameBtn.addEventListener('click', () => {
+            gameContainer.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            gameIframe.src = 'about:blank';
+        });
+
+        // Confetti animation
+        function showConfetti() {
+            const confettiContainer = document.getElementById('confetti-container');
+            const colors = ['#FFD700', '#FFA500', '#FF6347', '#4169E1', '#32CD32', '#FF69B4'];
+            
+            // Clear any existing confetti
+            confettiContainer.innerHTML = '';
+            
+            // Create confetti pieces
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                confetti.style.setProperty('--confetti-color', colors[Math.floor(Math.random() * colors.length)]);
+                
+                confettiContainer.appendChild(confetti);
+            }
+            
+            // Remove confetti after animation completes
+            setTimeout(() => {
+                confettiContainer.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Show random notifications occasionally
+        setTimeout(() => {
+            if (Math.random() > 0.5) {
+                showAvailableNotifications();
+            }
+        }, 10000);
+        
+        // Automatic tournament countdown
+        function updateTournamentCountdown() {
+            // In a real app, this would be connected to a backend
+            
+            // For demonstration, we'll just randomly change some numbers
+            const timerElements = document.querySelectorAll('.timer-container .bg-slate-700');
+            
+            if (timerElements.length > 0) {
+                const randomElement = timerElements[Math.floor(Math.random() * timerElements.length)];
+                const currentValue = parseInt(randomElement.textContent);
+                
+                if (!isNaN(currentValue) && currentValue > 0) {
+                    randomElement.textContent = currentValue - 1;
+                }
+            }
+            
+            setTimeout(updateTournamentCountdown, 30000);  // Update every 30 seconds for demo
+        }
+        
+        setTimeout(updateTournamentCountdown, 5000);
+        
+        // Simulate database connection
+        console.log('🔌 Connected to GameZone database');
+        
+        // Login form submission
+        const loginForm = document.getElementById('login-form');
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // In a real app, this would verify credentials with the backend
+            showToast('Successfully logged in!', 'success');
+            loginModal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
